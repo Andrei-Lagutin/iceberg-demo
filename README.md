@@ -14,8 +14,10 @@
 - `data/` — локальные данные MinIO (игнорируется Git)
 
 ## Требования
-- Docker Desktop (macOS)
-- (Для Apple Silicon) Если образы вытягиваются как `amd64`, убедись, что включена эмуляция Rosetta в настройках Docker Desktop, либо используй `platform:` в `docker-compose.yml`.
+- Docker Desktop (macOS/linux)
+- Композ собран на arm64 
+На обычном Linux (x86_64/amd64 или arm64) не нужно форсировать архитектуру. 
+В docker-compose.yml просто уберите строки platform: linux/arm64 у всех сервисов. Docker сам подтянет нативные образы под твою архитектуру.
 
 ## Быстрый старт
 
@@ -88,10 +90,6 @@ data/ — файлы Parquet.
 ./clean.sh --all  # дополнительно удалит docker-образы
 ``` 
 
-### Композ собран на arm64 
-
-На обычном Linux (x86_64/amd64 или arm64) не нужно форсировать архитектуру. 
-В docker-compose.yml просто уберите строки platform: linux/arm64 у всех сервисов. Docker сам подтянет нативные образы под твою архитектуру.
 
 
 ![MinIO Console](images/minio.png)
