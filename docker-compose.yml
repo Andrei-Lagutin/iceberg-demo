@@ -6,9 +6,7 @@ services:
     image: quay.io/minio/minio:RELEASE.2024-09-13T20-26-02Z.fips
     container_name: minio
     command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    ports: ["9000:9000","9001:9001"]
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -19,37 +17,57 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - data-network
+    restart: unless-stopped
+    networks: [data-network]
 
   iceberg-rest:
     platform: linux/amd64
     image: tabulario/iceberg-rest:1.6.0
     container_name: iceberg-rest
-    ports:
-      - "8181:8181"
-    env_file:
-      - ./env.list
+    ports: ["8181:8181"]
+    env_file: [./env.list]
     depends_on:
       minio:
         condition: service_healthy
-    networks:
-      - data-network
+    restart: unless-stopped
+    networks: [data-network]
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    ports: ["5432:5432"]
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [data-network]
 
   trino:
-    # platform: linux/amd64
     image: trinodb/trino:449
     container_name: trino
-    ports:
-      - "8080:8080"
-    env_file:
-      - ./env.list
+    ports: ["8080:8080"]
+    env_file: [./env.list]
     volumes:
       - ./catalog:/etc/trino/catalog
     depends_on:
-      - iceberg-rest
-    networks:
-      - data-network
+      iceberg-rest:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [data-network]
+
+volumes:
+  pg_data:
 
 networks:
   data-network:

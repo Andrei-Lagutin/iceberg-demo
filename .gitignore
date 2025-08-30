@@ -9,4 +9,7 @@ data/
 env.list
 
 # vscode
-.vscode/
+.vscode/data/
+.env
+env.list
+superset_home/

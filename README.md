@@ -6,16 +6,20 @@
 - **Trino** — SQL-движок  
 
 ## Состав
-- `docker-compose.yml` — сервисы (minio, iceberg-rest, trino)
-- `catalog/iceberg.properties` — конфиг коннектора Trino ↔ Iceberg (REST)
-- `start.sh`, `stop.sh`, `clean.sh` — запуск/остановка/очистка
-- `env.example` — шаблон переменных окружения
-- `env.list` — локальные переменные (не коммитится)
-- `data/` — локальные данные MinIO (игнорируется Git)
+
+docker-compose.yml — сервисы: minio, iceberg-rest, trino, postgres
+catalog/iceberg.properties — коннектор Trino ↔ Iceberg (REST)
+catalog/postgres.properties — коннектор Trino ↔ PostgreSQL
+postgres/init/01_seed.sql — авто-инициализация Postgres (демо-таблица customers)
+start.sh, stop.sh, clean.sh — запуск/остановка/очистка
+env.example → env.list — переменные окружения (локально, не коммитится)
+data/ — локальные данные MinIO (в .gitignore)
+images/ — скриншоты
 
 ## Требования
 - Docker Desktop (macOS/linux)
 - Композ собран на arm64 
+- у меня старая версия docker, в новой версии надо потереть в докер композе - version: "3.9"
 На обычном Linux (x86_64/amd64 или arm64) не нужно форсировать архитектуру. 
 В docker-compose.yml просто уберите строки platform: linux/arm64 у всех сервисов. Docker сам подтянет нативные образы под твою архитектуру.
 
@@ -30,6 +34,7 @@ cp env.example env.list
 ## старт 
 ``` bash
 ./start.sh
+# или docker compose up -d --build
 ```
 
 ## Если все ок 
@@ -73,6 +78,29 @@ INSERT INTO iceberg.demo.customer (id, first_name, last_name, age) VALUES
 SELECT * FROM iceberg.demo.customer;
 ```
 
+## postgres/init/01_seed.sql (выполняется при первом старте контейнера Postgres):
+
+Если БД уже инициализирована, сиды повторно не применяются
+
+## Сброс  Postgres (чтобы снова применились сиды)
+
+docker compose down
+docker volume rm $(basename "$PWD")_pg_data
+docker compose up -d
+
+## Федеративный запрос (Iceberg ↔ PostgreSQL)
+
+``` sql 
+SELECT
+  o.order_id,
+  c.customer_name,
+  o.amount,
+  c.country
+FROM iceberg.demo.orders o
+JOIN postgres.public.customers c
+  ON o.customer_id = c.customer_id
+ORDER BY o.order_id;
+``` 
 ## Смотрим в Веб Минио 
 
 Посмотреть файлы в MinIO
@@ -82,6 +110,7 @@ SELECT * FROM iceberg.demo.customer;
 Там будут:
 metadata/ — метаданные Iceberg (манифесты, snapshots и т.д.)
 data/ — файлы Parquet.
+
 
 ## Остановка и очистка
 ``` bash 
